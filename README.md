@@ -7,7 +7,7 @@
 Example:
 
 ```
-http://localhost:5173/course-review?date=2025-03-28&courseName=%E6%95%B0%E5%AD%A6&token=eyXX
+http://localhost:5173/course-review?date=2025-03-28&course=%E6%95%B0%E5%AD%A6
 ```
 
 Parameters:

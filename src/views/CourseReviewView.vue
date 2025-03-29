@@ -88,7 +88,7 @@ onMounted(async () => {
   try {
     const queryParams = new URLSearchParams(window.location.search)
     const dateParam = queryParams.get('date')
-    const courseNameParam = queryParams.get('courseName')
+    const courseNameParam = queryParams.get('course')
 
     if (dateParam) date.value = dateParam
     if (courseNameParam) courseName.value = decodeURIComponent(courseNameParam)
