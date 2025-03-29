@@ -23,6 +23,7 @@ interface CourseResponse {
 }
 
 interface CourseData {
+  subID: number
   courseName: string
   courseTeacher: string
   courseLocation: string
@@ -30,6 +31,7 @@ interface CourseData {
   courseTime: string
   courseVideo: string
   summary: string
+  summaryStatus: string
 }
 
 export const getCourse = async (courseName: string, date:string, token: string): Promise<CourseData | undefined> => {
@@ -47,19 +49,21 @@ export const getCourse = async (courseName: string, date:string, token: string):
       const courseResponse = response as CourseResponse
       if (courseResponse.code === 200 && courseResponse.data) {
         return {
+          subID: courseResponse.data.sub_id,
           courseName: courseResponse.data.name,
           courseTeacher: courseResponse.data.teacher,
           courseLocation: courseResponse.data.location,
           courseDate: courseResponse.data.date,
           courseTime: courseResponse.data.time,
           courseVideo: courseResponse.data.video,
-          summary: courseResponse.data.summary.data
+          summary: courseResponse.data.summary.data,
+          summaryStatus: courseResponse.data.summary.status
         }
       }
     }
     return undefined
   } catch (error) {
-    console.error('Failed to fetch course data:', error)
+    console.error('Failed to fetch:', error)
     return undefined
   }
 }

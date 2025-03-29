@@ -2,13 +2,14 @@
 import { ref, onMounted } from 'vue'
 import { User, MapLocation, Calendar, Clock } from '@element-plus/icons-vue'
 import { getCourse } from '@/api/getCourse'
+import { generateSummary } from '@/api/generateSummary.ts'
 
-const loading = ref(true)
 const activeTab = ref('info')
 const isVideoLoaded = ref(false)
 
 const date = ref('')
 const token = ref('')
+const subID = ref()
 const courseName = ref('')
 const courseTeacher = ref('')
 const courseLocation = ref('')
@@ -16,6 +17,7 @@ const courseDate = ref('')
 const courseTime = ref('')
 const courseVideo = ref('')
 const summary = ref('')
+const summaryStatus = ref('')
 
 const switchTab = (tab: string) => {
   activeTab.value = tab
@@ -23,6 +25,19 @@ const switchTab = (tab: string) => {
 
 const handleVideoLoad = () => {
   isVideoLoaded.value = true
+}
+
+const generateCourseSummary = async () => {
+  try {
+    const result = await generateSummary(subID.value)
+    summaryStatus.value = 'generating'
+    console.log('Generating summary, SubID:', subID.value)
+    if (result) {
+      summaryStatus.value = result.summaryStatus
+    }
+  } catch (error) {
+    console.error('Failed to generate summary:', error)
+  }
 }
 
 onMounted(async () => {
@@ -39,17 +54,17 @@ onMounted(async () => {
     const courseData = await getCourse(courseName.value, date.value, token.value)
     console.log(courseData)
     if (courseData) {
+      subID.value = courseData.subID
       courseTeacher.value = courseData.courseTeacher
       courseLocation.value = courseData.courseLocation
       courseDate.value = courseData.courseDate
       courseTime.value = courseData.courseTime
       courseVideo.value = courseData.courseVideo
       summary.value = courseData.summary
+      summaryStatus.value = courseData.summaryStatus
     }
   } catch (error) {
     console.error('Failed to load course data:', error)
-  } finally {
-    loading.value = false
   }
 })
 </script>
@@ -97,7 +112,7 @@ onMounted(async () => {
       </div>
     </div>
 
-    <div class="content-area">
+    <div class="content-area" :class="{ 'with-button': activeTab === 'summary' && summaryStatus === '' && courseVideo }">
       <div v-if="activeTab === 'info'" class="tab-content info-content active">
         <h2>{{ courseName }}</h2>
         <p class="info-item">
@@ -120,10 +135,25 @@ onMounted(async () => {
 
       <div v-else-if="activeTab === 'summary'" class="tab-content summary-content active">
         <h2>AI摘要</h2>
-        <p v-if="loading">加载中...</p>
+        <p v-if="summaryStatus === 'generating'" class="generating-status">
+          <t-loading size="small" style="margin-right: 8px" />
+          <span>生成中...请稍后查看...</span>
+        </p>
         <p v-else-if="summary">{{ summary }}</p>
         <p v-else>暂无摘要</p>
       </div>
+    </div>
+
+    <div class="bottom-button-container" v-if="activeTab === 'summary' && summaryStatus === '' && courseVideo">
+      <t-button
+        theme="primary"
+        size="medium"
+        block
+        @click="generateCourseSummary"
+        class="generate-summary-btn"
+      >
+        生成AI摘要
+      </t-button>
     </div>
   </div>
 </template>
@@ -138,6 +168,7 @@ onMounted(async () => {
   flex-direction: column;
   color: var(--td-text-color-primary, var(--td-font-white-1));
   background-color: var(--td-bg-color-page);
+  position: relative;
 }
 
 .video-container {
@@ -255,6 +286,10 @@ onMounted(async () => {
   background-color: var(--td-bg-color-container);
 }
 
+.content-area.with-button {
+  padding-bottom: 80px;
+}
+
 .content-area::-webkit-scrollbar {
   width: 6px;
 }
@@ -287,11 +322,42 @@ onMounted(async () => {
   opacity: 0;
   transform: translateY(10px);
   transition: opacity 0.3s ease, transform 0.3s ease;
+  min-height: calc(100% - 32px);
 }
 
 .tab-content.active {
   opacity: 1;
   transform: translateY(0);
+}
+
+.bottom-button-container {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16px;
+  background-color: var(--td-bg-color-container);
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  max-width: 600px;
+  margin: 0 auto;
+  border-top: 1px solid var(--td-border-level-1-color);
+}
+
+.generate-summary-btn {
+  border-radius: 4px;
+}
+
+.generating-status {
+  display: flex;
+  align-items: center;
+  color: var(--td-brand-color);
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.generating-status span {
+  display: inline-block;
 }
 
 h2 {
