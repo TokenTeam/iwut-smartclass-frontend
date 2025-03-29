@@ -135,14 +135,15 @@ onMounted(async () => {
 
       <div class="tab-bar">
         <div class="tab-item" :class="{ active: activeTab === 'info' }" @click="switchTab('info')">
-          <span>信息</span>
+          <span>课程信息</span>
         </div>
         <div
           class="tab-item"
           :class="{ active: activeTab === 'summary' }"
           @click="switchTab('summary')"
         >
-          <span>摘要</span>
+          <img src="/ai.svg" alt="AI" class="tab-icon" />
+          <span>AI智能总结</span>
         </div>
       </div>
     </div>
@@ -172,13 +173,13 @@ onMounted(async () => {
       </div>
 
       <div v-else-if="activeTab === 'summary'" class="tab-content summary-content active">
-        <h2>AI摘要</h2>
+        <h2>AI智能总结</h2>
         <p v-if="summaryStatus === 'generating'" class="generating-status">
           <t-loading size="small" style="margin-right: 8px" />
           <span>生成中...请稍后查看...</span>
         </p>
         <div v-else-if="summary" class="markdown-content" v-html="renderedSummary"></div>
-        <p v-else>暂无摘要</p>
+        <p v-else>暂无内容</p>
       </div>
     </div>
 
@@ -278,12 +279,14 @@ onMounted(async () => {
 .tab-item {
   flex: 0 0 auto;
   text-align: center;
-  padding: 12px 24px;
+  padding: 12px 12px;
   font-size: 14px;
   position: relative;
   cursor: pointer;
   transition: color 0.2s;
   margin-right: 8px;
+  display: flex;
+  align-items: center;
 }
 
 .tab-item::after {
@@ -298,6 +301,13 @@ onMounted(async () => {
     width 0.3s ease,
     left 0.3s ease;
   z-index: 1;
+}
+
+.tab-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 4px;
+  vertical-align: middle;
 }
 
 .tab-item span {
