@@ -2,13 +2,16 @@
 import { ref, onMounted, computed } from 'vue'
 import { User, MapLocation, Calendar, Clock } from '@element-plus/icons-vue'
 import { getCourse } from '@/api/getCourse'
-import { generateSummary } from '@/api/generateSummary.ts'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import katex from 'katex'
 import 'katex/dist/katex.min.css'
 
+import { generateSummary } from '@/api/generateSummary.ts'
+import { getToken, getLocalToken } from '@/api/rpc.ts'
+
 const activeTab = ref('info')
+const isLoading = ref(true)
 const isVideoLoaded = ref(false)
 
 const date = ref('')
@@ -44,7 +47,7 @@ const generateCourseSummary = async () => {
   }
 }
 
-const renderLatex = (text) => {
+const renderLatex = (text: string) => {
   // 处理 LaTeX 代码块 (用 $$ 包裹)
   text = text.replace(/\$\$([\s\S]+?)\$\$/g, (match, latex) => {
     try {
@@ -75,7 +78,7 @@ const renderedSummary = computed(() => {
   const processedText = renderLatex(summary.value)
 
   // 再将 Markdown 转换为 HTML
-  const rawHtml = marked(processedText)
+  const rawHtml = marked(processedText).toString()
 
   // 最后使用 DOMPurify 过滤 HTML
   return DOMPurify.sanitize(rawHtml)
@@ -85,14 +88,29 @@ onMounted(async () => {
   try {
     const queryParams = new URLSearchParams(window.location.search)
     const dateParam = queryParams.get('date')
-    const tokenParam = queryParams.get('token')
     const courseNameParam = queryParams.get('courseName')
 
     if (dateParam) date.value = dateParam
-    if (tokenParam) token.value = tokenParam
     if (courseNameParam) courseName.value = decodeURIComponent(courseNameParam)
 
-    const courseData = await getCourse(courseName.value, date.value, token.value)
+    token.value = await getLocalToken()
+    let courseData
+
+    try {
+      courseData = await getCourse(courseName.value, date.value, token.value)
+      if (!courseData) {
+        token.value = await getToken()
+        courseData = await getCourse(courseName.value, date.value, token.value)
+      }
+    } catch {
+      token.value = await getToken()
+      try {
+        courseData = await getCourse(courseName.value, date.value, token.value)
+      } catch (innerError) {
+        console.error("Failed to get course data even with new token:", innerError)
+      }
+    }
+
     console.log(courseData)
     if (courseData) {
       subID.value = courseData.subID
@@ -104,6 +122,8 @@ onMounted(async () => {
       summary.value = courseData.summary
       summaryStatus.value = courseData.summaryStatus
     }
+
+    isLoading.value = false
   } catch (error) {
     console.error('Failed to load course data:', error)
   }
@@ -152,6 +172,13 @@ onMounted(async () => {
       class="content-area"
       :class="{ 'with-button': activeTab === 'summary' && summaryStatus === '' && courseVideo }"
     >
+      <div v-if="isLoading" class="loading-overlay">
+        <div class="loading-content">
+          <t-loading loading theme="circular" size="52px" />
+          <span class="loading-text">加载中</span>
+        </div>
+      </div>
+
       <div v-if="activeTab === 'info'" class="tab-content info-content active">
         <h2>{{ courseName }}</h2>
         <p class="info-item">
@@ -332,11 +359,38 @@ onMounted(async () => {
   background-color: var(--td-bg-color-container-active);
 }
 
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: var(--td-bg-color-page);
+  z-index: 100;
+}
+
+.loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-text {
+  margin-top: 16px;
+  color: var(--td-text-color-primary);
+  font-size: 18px;
+}
+
 .content-area {
   padding: 16px;
   flex: 1;
   overflow-y: auto;
   background-color: var(--td-bg-color-container);
+  position: relative;
 }
 
 .content-area.with-button {
