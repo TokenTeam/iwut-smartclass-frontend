@@ -1,8 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { User, MapLocation, Calendar, Clock } from '@element-plus/icons-vue'
 import { getCourse } from '@/api/getCourse'
 import { generateSummary } from '@/api/generateSummary.ts'
+import { marked } from 'marked'
+import DOMPurify from 'dompurify'
+import katex from 'katex'
+import 'katex/dist/katex.min.css'
 
 const activeTab = ref('info')
 const isVideoLoaded = ref(false)
@@ -39,6 +43,43 @@ const generateCourseSummary = async () => {
     console.error('Failed to generate summary:', error)
   }
 }
+
+const renderLatex = (text) => {
+  // 处理 LaTeX 代码块 (用 $$ 包裹)
+  text = text.replace(/\$\$([\s\S]+?)\$\$/g, (match, latex) => {
+    try {
+      return katex.renderToString(latex, { displayMode: true, throwOnError: false })
+    } catch (e) {
+      console.error('LaTeX error:', e)
+      return match
+    }
+  })
+
+  // 处理行内 LaTeX (用 $ 包裹)
+  text = text.replace(/\$(.+?)\$/g, (match, latex) => {
+    try {
+      return katex.renderToString(latex, { displayMode: false, throwOnError: false })
+    } catch (e) {
+      console.error('LaTeX error:', e)
+      return match
+    }
+  })
+
+  return text
+}
+
+const renderedSummary = computed(() => {
+  if (!summary.value) return ''
+
+  // 先处理 Markdown 内容中的 LaTeX 公式
+  const processedText = renderLatex(summary.value)
+
+  // 再将 Markdown 转换为 HTML
+  const rawHtml = marked(processedText)
+
+  // 最后使用 DOMPurify 过滤 HTML
+  return DOMPurify.sanitize(rawHtml)
+})
 
 onMounted(async () => {
   try {
@@ -81,9 +122,7 @@ onMounted(async () => {
             theme="circular"
             size="52px"
           />
-          <div v-if="!courseVideo" class="no-video-message">
-            暂无视频
-          </div>
+          <div v-if="!courseVideo" class="no-video-message">暂无视频</div>
           <iframe
             v-else
             :src="courseVideo"
@@ -95,11 +134,7 @@ onMounted(async () => {
       </div>
 
       <div class="tab-bar">
-        <div
-          class="tab-item"
-          :class="{ active: activeTab === 'info' }"
-          @click="switchTab('info')"
-        >
+        <div class="tab-item" :class="{ active: activeTab === 'info' }" @click="switchTab('info')">
           <span>信息</span>
         </div>
         <div
@@ -112,7 +147,10 @@ onMounted(async () => {
       </div>
     </div>
 
-    <div class="content-area" :class="{ 'with-button': activeTab === 'summary' && summaryStatus === '' && courseVideo }">
+    <div
+      class="content-area"
+      :class="{ 'with-button': activeTab === 'summary' && summaryStatus === '' && courseVideo }"
+    >
       <div v-if="activeTab === 'info'" class="tab-content info-content active">
         <h2>{{ courseName }}</h2>
         <p class="info-item">
@@ -139,12 +177,15 @@ onMounted(async () => {
           <t-loading size="small" style="margin-right: 8px" />
           <span>生成中...请稍后查看...</span>
         </p>
-        <p v-else-if="summary">{{ summary }}</p>
+        <div v-else-if="summary" class="markdown-content" v-html="renderedSummary"></div>
         <p v-else>暂无摘要</p>
       </div>
     </div>
 
-    <div class="bottom-button-container" v-if="activeTab === 'summary' && summaryStatus === '' && courseVideo">
+    <div
+      class="bottom-button-container"
+      v-if="activeTab === 'summary' && summaryStatus === '' && courseVideo"
+    >
       <t-button
         theme="primary"
         size="medium"
@@ -253,7 +294,9 @@ onMounted(async () => {
   width: 0;
   height: 2px;
   background-color: var(--td-brand-color);
-  transition: width 0.3s ease, left 0.3s ease;
+  transition:
+    width 0.3s ease,
+    left 0.3s ease;
   z-index: 1;
 }
 
@@ -321,7 +364,9 @@ onMounted(async () => {
   animation: none;
   opacity: 0;
   transform: translateY(10px);
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
   min-height: calc(100% - 32px);
 }
 
@@ -371,8 +416,106 @@ p {
   margin-top: 0.5rem;
 }
 
+.markdown-content {
+  color: var(--td-text-color-secondary, var(--td-font-white-2));
+  margin-top: 0.5rem;
+}
+
+.markdown-content :deep(h1),
+.markdown-content :deep(h2),
+.markdown-content :deep(h3),
+.markdown-content :deep(h4),
+.markdown-content :deep(h5),
+.markdown-content :deep(h6) {
+  color: var(--td-warning-color-8);
+  margin: 1rem 0 0.5rem;
+}
+
+.markdown-content :deep(h1) {
+  font-size: 1.5rem;
+}
+
+.markdown-content :deep(h2) {
+  font-size: 1.3rem;
+}
+
+.markdown-content :deep(p) {
+  margin: 0.5rem 0;
+}
+
+.markdown-content :deep(ul),
+.markdown-content :deep(ol) {
+  padding-left: 1.5rem;
+}
+
+.markdown-content :deep(pre) {
+  background-color: var(--td-bg-color-page);
+  padding: 0.5rem;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
+.markdown-content :deep(code) {
+  font-family: monospace;
+  background-color: var(--td-bg-color-page);
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+}
+
+.markdown-content :deep(a) {
+  color: var(--td-brand-color);
+  text-decoration: none;
+}
+
+.markdown-content :deep(a:hover) {
+  text-decoration: underline;
+}
+
+.markdown-content :deep(blockquote) {
+  border-left: 3px solid var(--td-brand-color);
+  padding-left: 1rem;
+  margin-left: 0;
+  color: var(--td-text-color-placeholder);
+}
+
+.markdown-content :deep(table) {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1rem 0;
+}
+
+.markdown-content :deep(th),
+.markdown-content :deep(td) {
+  border: 1px solid var(--td-border-level-1-color);
+  padding: 0.5rem;
+}
+
+/* KaTeX specific styles */
+.markdown-content :deep(.katex) {
+  font-size: 1.1em;
+}
+
+.markdown-content :deep(.katex-display) {
+  margin: 1rem 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.5rem 0;
+}
+
+.markdown-content :deep(.katex-display > .katex) {
+  max-width: 100%;
+}
+
+.markdown-content :deep(.katex .base) {
+  color: var(--td-text-color-primary);
+}
+
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 </style>
