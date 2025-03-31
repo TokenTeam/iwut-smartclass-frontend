@@ -146,7 +146,7 @@ onMounted(async () => {
           <iframe
             v-else
             :src="courseVideo"
-            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
             allowfullscreen
             @load="handleVideoLoad"
           ></iframe>
@@ -257,6 +257,7 @@ onMounted(async () => {
 .video-placeholder,
 .video-placeholder iframe {
   position: absolute;
+  border: none;
   top: 0;
   left: 0;
   width: 100%;
