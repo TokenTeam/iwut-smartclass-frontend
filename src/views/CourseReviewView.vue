@@ -85,6 +85,8 @@ const renderedSummary = computed(() => {
 })
 
 onMounted(async () => {
+  document.title = '课程回顾'
+
   try {
     const queryParams = new URLSearchParams(window.location.search)
     const dateParam = queryParams.get('date')
@@ -124,6 +126,7 @@ onMounted(async () => {
     }
 
     isLoading.value = false
+    document.title = `${courseName.value} - 课程回顾`
   } catch (error) {
     console.error('Failed to load course data:', error)
   }
@@ -262,7 +265,6 @@ onMounted(async () => {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: var(--td-bg-color-container);
 }
 
 .video-loading {
