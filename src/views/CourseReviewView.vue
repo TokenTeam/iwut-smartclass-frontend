@@ -1,15 +1,18 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'
 import { User, MapLocation, Calendar, Clock } from '@element-plus/icons-vue'
-import { getCourse } from '@/api/getCourse'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import katex from 'katex'
 import 'katex/dist/katex.min.css'
+import Plyr from 'plyr'
+import 'plyr/dist/plyr.css'
 
-import { generateSummary } from '@/api/generateSummary.ts'
-import { getToken, getLocalToken } from '@/api/rpc.ts'
+import { generateSummary } from '@/api/generateSummary'
+import { getCourse } from '@/api/getCourse'
+import { getToken, getLocalToken } from '@/api/rpc'
 
+const videoEl = ref(null)
 const activeTab = ref('info')
 const isLoading = ref(true)
 const isVideoLoaded = ref(false)
@@ -26,8 +29,48 @@ const courseVideo = ref('')
 const summary = ref('')
 const summaryStatus = ref('')
 
+let player: Plyr | null = null
+
 const switchTab = (tab: string) => {
   activeTab.value = tab
+}
+
+watch(courseVideo, (newValue) => {
+  if (newValue && videoEl.value) {
+    initPlayer()
+  }
+})
+
+const initPlayer = () => {
+  if (player) {
+    player.destroy()
+  }
+
+  setTimeout(() => {
+    if (videoEl.value) {
+      player = new Plyr(videoEl.value, {
+        controls: [
+          'play-large',
+          'play',
+          'progress',
+          'current-time',
+          'duration',
+          'mute',
+          'volume',
+          'captions',
+          'settings',
+          'pip',
+          'airplay',
+          'fullscreen',
+        ],
+        settings: ['captions', 'quality', 'speed'],
+        speed: { selected: 1, options: [0.5, 0.75, 1, 1.25, 1.5, 2] },
+        autoplay: false,
+      })
+
+      player.on('loadeddata', handleVideoLoad)
+    }
+  }, 0)
 }
 
 const handleVideoLoad = () => {
@@ -109,7 +152,7 @@ onMounted(async () => {
       try {
         courseData = await getCourse(courseName.value, date.value, token.value)
       } catch (innerError) {
-        console.error("Failed to get course data even with new token:", innerError)
+        console.error('Failed to get course data even with new token:', innerError)
       }
     }
 
@@ -127,8 +170,18 @@ onMounted(async () => {
 
     isLoading.value = false
     document.title = `${courseName.value} - 课程回顾`
+
+    if (courseVideo.value) {
+      initPlayer()
+    }
   } catch (error) {
     console.error('Failed to load course data:', error)
+  }
+})
+
+onBeforeUnmount(() => {
+  if (player) {
+    player.destroy()
   }
 })
 </script>
@@ -146,13 +199,11 @@ onMounted(async () => {
             size="52px"
           />
           <div v-if="!courseVideo" class="no-video-message">暂无视频</div>
-          <iframe
-            v-else
-            :src="courseVideo"
-            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-            allowfullscreen
-            @load="handleVideoLoad"
-          ></iframe>
+          <div v-if="!courseVideo" class="plyr-container">
+            <video ref="videoEl" class="plyr-video" playsinline>
+              <source :src="courseVideo" type="video/mp4" />
+            </video>
+          </div>
         </div>
       </div>
 
@@ -185,19 +236,27 @@ onMounted(async () => {
       <div v-if="activeTab === 'info'" class="tab-content info-content active">
         <h2>{{ courseName }}</h2>
         <p class="info-item">
-          <el-icon><User /></el-icon>
+          <el-icon>
+            <User />
+          </el-icon>
           {{ courseTeacher }}
         </p>
         <p class="info-item">
-          <el-icon><MapLocation /></el-icon>
+          <el-icon>
+            <MapLocation />
+          </el-icon>
           {{ courseLocation }}
         </p>
         <p class="info-item">
-          <el-icon><Calendar /></el-icon>
+          <el-icon>
+            <Calendar />
+          </el-icon>
           {{ courseDate }}
         </p>
         <p class="info-item">
-          <el-icon><Clock /></el-icon>
+          <el-icon>
+            <Clock />
+          </el-icon>
           {{ courseTime }}
         </p>
       </div>
@@ -257,13 +316,33 @@ onMounted(async () => {
   padding-bottom: 56.25%;
 }
 
-.video-placeholder,
-.video-placeholder iframe {
+.video-placeholder {
   position: absolute;
   border: none;
   top: 0;
   left: 0;
   width: 100%;
+  height: 100%;
+}
+
+.plyr-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.plyr-video {
+  width: 100%;
+  height: 100%;
+}
+
+:deep(.plyr--video) {
+  height: 100%;
+}
+
+:deep(.plyr__video-wrapper) {
   height: 100%;
 }
 
