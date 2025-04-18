@@ -1,5 +1,8 @@
 # iwut-smartclass-frontend
 
+> [!TIP]
+> Need NativeRPC
+
 ## Endpoints
 
 ### Course Review `/course-review`
@@ -14,7 +17,6 @@ Parameters:
 
 - `date`: Date of the course review.
 - `courseName`: URL Encoded name of the course.
-- `token`: Token for authentication.
 
 ## Project Setup
 
