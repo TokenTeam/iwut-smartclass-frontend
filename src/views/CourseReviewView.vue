@@ -36,7 +36,7 @@ const handleVideoLoad = () => {
 
 const generateCourseSummary = async () => {
   try {
-    const result = await generateSummary(subID.value)
+    const result = await generateSummary(subID.value, token.value)
     summaryStatus.value = 'generating'
     console.log('Generating summary, SubID:', subID.value)
     if (result) {

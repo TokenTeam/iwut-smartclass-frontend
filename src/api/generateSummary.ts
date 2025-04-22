@@ -15,11 +15,12 @@ interface SummaryData {
   summaryStatus: string
 }
 
-export const generateSummary = async (subID: number): Promise<SummaryData | undefined> => {
+export const generateSummary = async (subID: number, token: string): Promise<SummaryData | undefined> => {
   const errorMessage = ref('')
 
   const postData = {
-    sub_id: subID,
+    "sub_id": subID,
+    "token": token,
   }
 
   try {
