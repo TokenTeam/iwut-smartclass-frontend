@@ -25,6 +25,7 @@ const courseTime = ref('')
 const courseVideo = ref('')
 const summary = ref('')
 const summaryStatus = ref('')
+const copyStatus = ref(false)
 
 const switchTab = (tab: string) => {
   activeTab.value = tab
@@ -45,6 +46,67 @@ const generateCourseSummary = async (task: string) => {
   } catch (error) {
     console.error('Failed to generate summary:', error)
   }
+}
+
+const copyMarkdown = () => {
+  if (!summary.value) {
+    console.warn('No summary available to copy')
+    return
+  }
+
+  try {
+    const ua = navigator.userAgent.toLowerCase()
+    const isWebview = ua.includes('wv') ||
+                       ua.includes('android') && ua.includes('version/')
+
+    if (navigator.clipboard && !isWebview) {
+      navigator.clipboard.writeText(summary.value)
+        .then(() => {
+          copyStatus.value = true
+          console.log('Markdown copied to clipboard')
+          setTimeout(() => copyStatus.value = false, 2000)
+        })
+        .catch(err => fallbackCopy(err))
+    } else {
+      fallbackCopy()
+    }
+  } catch (e) {
+    console.error('Copy operation failed:', e)
+  }
+}
+
+const fallbackCopy = (err?: never) => {
+  if (err) console.error('Failed to copy using clipboard API:', err)
+
+  const textArea = document.createElement('textarea')
+  textArea.value = summary.value
+  textArea.setAttribute('readonly', 'readonly')
+  textArea.style.position = 'absolute'
+  textArea.style.left = '-9999px'
+  document.body.appendChild(textArea)
+
+  // iOS
+  const range = document.createRange()
+  range.selectNodeContents(textArea)
+  const selection = window.getSelection()
+  if (selection) {
+    selection.removeAllRanges()
+    selection.addRange(range)
+    textArea.setSelectionRange(0, summary.value.length)
+  } else {
+    textArea.select()
+  }
+
+  try {
+    const successful = document.execCommand('copy')
+    copyStatus.value = true
+    setTimeout(() => copyStatus.value = false, 2000)
+    console.log(successful ? 'Fallback copy succeeded' : 'Fallback copy failed')
+  } catch (e) {
+    console.error('Fallback copy method failed:', e)
+  }
+
+  document.body.removeChild(textArea)
 }
 
 const renderLatex = (text: string) => {
@@ -204,23 +266,37 @@ onMounted(async () => {
 
       <div v-else-if="activeTab === 'summary'" class="tab-content summary-content active">
         <h2>AI智能总结</h2>
-        <div v-if="summary" class="functional-area">
+
+        <div v-if="summary" class="function-area">
           <div class="divider top-divider"></div>
-          <div class="regenerate-container">
+          <div class="function-container">
             <t-button
               size="small"
               variant="outline"
               @click="generateCourseSummary('regenerate')"
-              class="regenerate-btn"
+              class="function-btn"
             >
               <template #icon>
                 <t-icon name="refresh" />
               </template>
               重新生成
             </t-button>
+
+            <t-button
+              size="small"
+              variant="outline"
+              @click="copyMarkdown"
+              class="function-btn"
+            >
+              <template #icon>
+                <t-icon :name="copyStatus ? 'check-circle-filled' : 'file-copy'" />
+              </template>
+              {{ copyStatus ? '已复制' : '复制Markdown' }}
+            </t-button>
           </div>
           <div class="divider bottom-divider"></div>
         </div>
+
         <p v-if="summaryStatus === 'generating'" class="generating-status">
           <t-loading size="small" style="margin-right: 8px" />
           <span>生成中...请稍后查看...</span>
@@ -489,7 +565,7 @@ onMounted(async () => {
   display: inline-block;
 }
 
-.functional-area {
+.function-area {
   margin: 20px 0;
   padding: 16px 0;
   position: relative;
@@ -510,18 +586,19 @@ onMounted(async () => {
   bottom: 0;
 }
 
-.regenerate-container {
+.function-container {
   display: flex;
   padding: 4px 0;
+  gap: 8px;
 }
 
-.regenerate-btn {
+.function-btn {
   font-size: 14px;
   border-radius: 4px;
   transition: all 0.2s ease;
 }
 
-.regenerate-btn:hover {
+.function-btn:hover {
   color: var(--td-brand-color);
   border-color: var(--td-brand-color);
 }
