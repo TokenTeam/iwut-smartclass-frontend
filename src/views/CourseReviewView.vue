@@ -13,6 +13,8 @@ import { getToken, getLocalToken } from '@/api/rpc.ts'
 const activeTab = ref('info')
 const isLoading = ref(true)
 const isVideoLoaded = ref(false)
+const isFunctionAreaExpanded = ref(false)
+const copyStatus = ref(false)
 
 const date = ref('')
 const token = ref('')
@@ -25,7 +27,6 @@ const courseTime = ref('')
 const courseVideo = ref('')
 const summary = ref('')
 const summaryStatus = ref('')
-const copyStatus = ref(false)
 
 const switchTab = (tab: string) => {
   activeTab.value = tab
@@ -48,6 +49,10 @@ const generateCourseSummary = async (task: string) => {
   }
 }
 
+const toggleFunctionArea = () => {
+  isFunctionAreaExpanded.value = !isFunctionAreaExpanded.value
+}
+
 const copyMarkdown = async () => {
   if (!summary.value) {
     console.warn('No summary available to copy')
@@ -60,7 +65,7 @@ const copyMarkdown = async () => {
       await navigator.clipboard.writeText(summary.value)
       copyStatus.value = true
       console.log('Markdown copied to clipboard using Clipboard API')
-      setTimeout(() => copyStatus.value = false, 2000)
+      setTimeout(() => (copyStatus.value = false), 2000)
       return
     }
 
@@ -80,7 +85,7 @@ const copyMarkdown = async () => {
 
     copyStatus.value = true
     console.log('Markdown copied to clipboard using execCommand')
-    setTimeout(() => copyStatus.value = false, 2000)
+    setTimeout(() => (copyStatus.value = false), 2000)
   } catch (e) {
     console.error('Copy operation failed:', e)
     alert('复制失败，请检查剪贴板权限')
@@ -225,28 +230,49 @@ onMounted(async () => {
       <div v-if="activeTab === 'info'" class="tab-content info-content active">
         <h2>{{ courseName }}</h2>
         <p class="info-item">
-          <el-icon><User /></el-icon>
+          <el-icon>
+            <User />
+          </el-icon>
           {{ courseTeacher }}
         </p>
         <p class="info-item">
-          <el-icon><MapLocation /></el-icon>
+          <el-icon>
+            <MapLocation />
+          </el-icon>
           {{ courseLocation }}
         </p>
         <p class="info-item">
-          <el-icon><Calendar /></el-icon>
+          <el-icon>
+            <Calendar />
+          </el-icon>
           {{ courseDate }}
         </p>
         <p class="info-item">
-          <el-icon><Clock /></el-icon>
+          <el-icon>
+            <Clock />
+          </el-icon>
           {{ courseTime }}
         </p>
       </div>
 
       <div v-else-if="activeTab === 'summary'" class="tab-content summary-content active">
-        <h2>AI智能总结</h2>
+        <div class="summary-header">
+          <h2>AI智能总结</h2>
+          <t-button
+            variant="text"
+            size="small"
+            @click="toggleFunctionArea"
+            class="function-toggle"
+            :class="{ expanded: isFunctionAreaExpanded }"
+          >
+            <template #icon>
+              <t-icon name="setting" />
+            </template>
+            工具箱
+          </t-button>
+        </div>
 
-        <div v-if="summary" class="function-area">
-          <div class="divider top-divider"></div>
+        <div v-if="summary && isFunctionAreaExpanded" class="function-area">
           <div class="function-container">
             <t-button
               size="small"
@@ -260,19 +286,18 @@ onMounted(async () => {
               重新生成
             </t-button>
 
-            <t-button
-              size="small"
-              variant="outline"
-              @click="copyMarkdown"
-              class="function-btn"
-            >
+            <t-button size="small" variant="outline" @click="copyMarkdown" class="function-btn">
               <template #icon>
                 <t-icon :name="copyStatus ? 'check-circle-filled' : 'file-copy'" />
               </template>
               {{ copyStatus ? '已复制' : '复制Markdown' }}
             </t-button>
           </div>
-          <div class="divider bottom-divider"></div>
+        </div>
+
+        <div v-if="summary" class="ai-warning-banner">
+          <t-icon name="info-circle" class="warning-icon"></t-icon>
+          <span>内容由AI生成，请注意分辨</span>
         </div>
 
         <p v-if="summaryStatus === 'generating'" class="generating-status">
@@ -543,25 +568,46 @@ onMounted(async () => {
   display: inline-block;
 }
 
+.summary-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.function-toggle {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  transition: all 0.3s ease;
+  border-radius: 4px;
+}
+
+.function-toggle:hover {
+  background-color: var(--td-bg-color-container-hover);
+}
+
+.function-toggle .t-icon {
+  transition: transform 0.3s ease;
+}
+
+.function-toggle.expanded .t-icon {
+  transform: rotate(180deg);
+}
+
 .function-area {
-  margin: 20px 0;
-  padding: 16px 0;
-  position: relative;
+  animation: fadeIn 0.3s ease;
 }
 
-.divider {
-  border-top: 1px dashed var(--td-border-level-2-color);
-  position: absolute;
-  left: 0;
-  right: 0;
-}
-
-.top-divider {
-  top: 0;
-}
-
-.bottom-divider {
-  bottom: 0;
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .function-container {
@@ -581,6 +627,24 @@ onMounted(async () => {
   border-color: var(--td-brand-color);
 }
 
+.ai-warning-banner {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  margin-top: 8px;
+  background-color: var(--td-bg-color-container-hover);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--td-text-color-secondary);
+  animation: fadeIn 0.3s ease;
+}
+
+.warning-icon {
+  margin-right: 6px;
+  font-size: 14px;
+  color: var(--td-warning-color);
+}
+
 h2 {
   color: var(--td-brand-color);
   margin-top: 0;
@@ -592,6 +656,7 @@ p {
   margin-top: 0.5rem;
 }
 
+/* Markdown styles */
 .markdown-content {
   color: var(--td-text-color-secondary, var(--td-font-white-2));
   margin-top: 0.5rem;
@@ -666,7 +731,16 @@ p {
   padding: 0.5rem;
 }
 
-/* KaTeX specific styles */
+.markdown-content :deep(hr) {
+  border: none;
+  border-top: 1px dashed var(--td-border-level-2-color);
+  margin-top: 8px;
+  margin-bottom: 8px;
+  height: 0;
+  width: 100%;
+}
+
+/* KaTeX styles */
 .markdown-content :deep(.katex) {
   font-size: 1.1em;
 }
