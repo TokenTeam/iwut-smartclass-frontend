@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { User, MapLocation, Calendar, Clock } from '@element-plus/icons-vue'
-import { getCourse } from '@/api/getCourse'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import katex from 'katex'
 import 'katex/dist/katex.min.css'
 
+import { getCourse } from '@/api/getCourse'
 import { generateSummary } from '@/api/generateSummary.ts'
 import { getToken, getLocalToken } from '@/api/rpc.ts'
+import { copyToClipboard } from '@/utils/clipboard.ts'
 
 const activeTab = ref('info')
 const isLoading = ref(true)
@@ -51,45 +52,6 @@ const generateCourseSummary = async (task: string) => {
 
 const toggleFunctionArea = () => {
   isFunctionAreaExpanded.value = !isFunctionAreaExpanded.value
-}
-
-const copyMarkdown = async () => {
-  if (!summary.value) {
-    console.warn('No summary available to copy')
-    return
-  }
-
-  try {
-    // 使用 Clipboard API
-    if (navigator.clipboard) {
-      await navigator.clipboard.writeText(summary.value)
-      copyStatus.value = true
-      console.log('Markdown copied to clipboard using Clipboard API')
-      setTimeout(() => (copyStatus.value = false), 2000)
-      return
-    }
-
-    // 对于不支持 Clipboard API 的浏览器
-    const textArea = document.createElement('textarea')
-    textArea.value = summary.value
-    textArea.style.position = 'fixed'
-    textArea.style.left = '0'
-    textArea.style.top = '0'
-    textArea.style.opacity = '0'
-    document.body.appendChild(textArea)
-    textArea.focus()
-    textArea.select()
-
-    document.execCommand('copy')
-    document.body.removeChild(textArea)
-
-    copyStatus.value = true
-    console.log('Markdown copied to clipboard using execCommand')
-    setTimeout(() => (copyStatus.value = false), 2000)
-  } catch (e) {
-    console.error('Copy operation failed:', e)
-    alert('复制失败，请检查剪贴板权限')
-  }
 }
 
 const renderLatex = (text: string) => {
@@ -286,7 +248,12 @@ onMounted(async () => {
               重新生成
             </t-button>
 
-            <t-button size="small" variant="outline" @click="copyMarkdown" class="function-btn">
+            <t-button
+              size="small"
+              variant="outline"
+              @click="copyToClipboard(summary, (status) => copyStatus = status)"
+              class="function-btn"
+            >
               <template #icon>
                 <t-icon :name="copyStatus ? 'check-circle-filled' : 'file-copy'" />
               </template>
