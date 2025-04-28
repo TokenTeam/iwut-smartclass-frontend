@@ -34,9 +34,9 @@ const handleVideoLoad = () => {
   isVideoLoaded.value = true
 }
 
-const generateCourseSummary = async () => {
+const generateCourseSummary = async (task: string) => {
   try {
-    const result = await generateSummary(subID.value, token.value)
+    const result = await generateSummary(subID.value, token.value, task)
     summaryStatus.value = 'generating'
     console.log('Generating summary, SubID:', subID.value)
     if (result) {
@@ -109,7 +109,7 @@ onMounted(async () => {
       try {
         courseData = await getCourse(courseName.value, date.value, token.value)
       } catch (innerError) {
-        console.error("Failed to get course data even with new token:", innerError)
+        console.error('Failed to get course data even with new token:', innerError)
       }
     }
 
@@ -204,6 +204,23 @@ onMounted(async () => {
 
       <div v-else-if="activeTab === 'summary'" class="tab-content summary-content active">
         <h2>AI智能总结</h2>
+        <div v-if="summary" class="functional-area">
+          <div class="divider top-divider"></div>
+          <div class="regenerate-container">
+            <t-button
+              size="small"
+              variant="outline"
+              @click="generateCourseSummary('regenerate')"
+              class="regenerate-btn"
+            >
+              <template #icon>
+                <t-icon name="refresh" />
+              </template>
+              重新生成
+            </t-button>
+          </div>
+          <div class="divider bottom-divider"></div>
+        </div>
         <p v-if="summaryStatus === 'generating'" class="generating-status">
           <t-loading size="small" style="margin-right: 8px" />
           <span>生成中...请稍后查看...</span>
@@ -221,7 +238,7 @@ onMounted(async () => {
         theme="primary"
         size="medium"
         block
-        @click="generateCourseSummary"
+        @click="generateCourseSummary('new')"
         class="generate-summary-btn"
       >
         生成AI摘要
@@ -470,6 +487,43 @@ onMounted(async () => {
 
 .generating-status span {
   display: inline-block;
+}
+
+.functional-area {
+  margin: 20px 0;
+  padding: 16px 0;
+  position: relative;
+}
+
+.divider {
+  border-top: 1px dashed var(--td-border-level-2-color);
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+
+.top-divider {
+  top: 0;
+}
+
+.bottom-divider {
+  bottom: 0;
+}
+
+.regenerate-container {
+  display: flex;
+  padding: 4px 0;
+}
+
+.regenerate-btn {
+  font-size: 14px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.regenerate-btn:hover {
+  color: var(--td-brand-color);
+  border-color: var(--td-brand-color);
 }
 
 h2 {
