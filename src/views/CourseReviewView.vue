@@ -48,65 +48,43 @@ const generateCourseSummary = async (task: string) => {
   }
 }
 
-const copyMarkdown = () => {
+const copyMarkdown = async () => {
   if (!summary.value) {
     console.warn('No summary available to copy')
     return
   }
 
   try {
-    const ua = navigator.userAgent.toLowerCase()
-    const isWebview = ua.includes('wv') ||
-                       ua.includes('android') && ua.includes('version/')
-
-    if (navigator.clipboard && !isWebview) {
-      navigator.clipboard.writeText(summary.value)
-        .then(() => {
-          copyStatus.value = true
-          console.log('Markdown copied to clipboard')
-          setTimeout(() => copyStatus.value = false, 2000)
-        })
-        .catch(err => fallbackCopy(err))
-    } else {
-      fallbackCopy()
+    // 使用 Clipboard API
+    if (navigator.clipboard) {
+      await navigator.clipboard.writeText(summary.value)
+      copyStatus.value = true
+      console.log('Markdown copied to clipboard using Clipboard API')
+      setTimeout(() => copyStatus.value = false, 2000)
+      return
     }
+
+    // 对于不支持 Clipboard API 的浏览器
+    const textArea = document.createElement('textarea')
+    textArea.value = summary.value
+    textArea.style.position = 'fixed'
+    textArea.style.left = '0'
+    textArea.style.top = '0'
+    textArea.style.opacity = '0'
+    document.body.appendChild(textArea)
+    textArea.focus()
+    textArea.select()
+
+    document.execCommand('copy')
+    document.body.removeChild(textArea)
+
+    copyStatus.value = true
+    console.log('Markdown copied to clipboard using execCommand')
+    setTimeout(() => copyStatus.value = false, 2000)
   } catch (e) {
     console.error('Copy operation failed:', e)
+    alert('复制失败，请检查剪贴板权限')
   }
-}
-
-const fallbackCopy = (err?: never) => {
-  if (err) console.error('Failed to copy using clipboard API:', err)
-
-  const textArea = document.createElement('textarea')
-  textArea.value = summary.value
-  textArea.setAttribute('readonly', 'readonly')
-  textArea.style.position = 'absolute'
-  textArea.style.left = '-9999px'
-  document.body.appendChild(textArea)
-
-  // iOS
-  const range = document.createRange()
-  range.selectNodeContents(textArea)
-  const selection = window.getSelection()
-  if (selection) {
-    selection.removeAllRanges()
-    selection.addRange(range)
-    textArea.setSelectionRange(0, summary.value.length)
-  } else {
-    textArea.select()
-  }
-
-  try {
-    const successful = document.execCommand('copy')
-    copyStatus.value = true
-    setTimeout(() => copyStatus.value = false, 2000)
-    console.log(successful ? 'Fallback copy succeeded' : 'Fallback copy failed')
-  } catch (e) {
-    console.error('Fallback copy method failed:', e)
-  }
-
-  document.body.removeChild(textArea)
 }
 
 const renderLatex = (text: string) => {
