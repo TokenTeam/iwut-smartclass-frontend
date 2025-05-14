@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, watch, nextTick, computed } from 'vue'
 import { User, MapLocation, Calendar, Clock } from '@element-plus/icons-vue'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import katex from 'katex'
+import hljs from 'highlight.js'
 import 'katex/dist/katex.min.css'
+import 'highlight.js/styles/atom-one-dark.css'
 
 import { getCourse } from '@/api/getCourse'
 import { generateSummary } from '@/api/generateSummary.ts'
@@ -30,8 +32,14 @@ const summary = ref('')
 const summaryStatus = ref('')
 
 const switchTab = (tab: string) => {
-  activeTab.value = tab
-}
+  activeTab.value = tab;
+  if (tab === 'summary' && summary.value) {
+    // 延迟执行确保 DOM 更新
+    setTimeout(() => {
+      applyHighlight();
+    }, 100);
+  }
+};
 
 const handleVideoLoad = () => {
   isVideoLoaded.value = true
@@ -91,6 +99,35 @@ const renderedSummary = computed(() => {
   return DOMPurify.sanitize(rawHtml)
 })
 
+// 处理代码块高亮
+const applyHighlight = () => {
+  nextTick(() => {
+    document.querySelectorAll('pre code').forEach((block) => {
+      hljs.highlightElement(block as HTMLElement);
+    });
+  });
+};
+
+marked.setOptions({
+  highlight: function(code: string, language: string) {
+    if (language && hljs.getLanguage(language)) {
+      try {
+        return hljs.highlight(code, {language}).value;
+      } catch {
+        return code;
+      }
+    }
+    return hljs.highlightAuto(code).value;
+  },
+  langPrefix: 'hljs language-'
+} as never);
+
+watch(renderedSummary, () => {
+  if (renderedSummary.value) {
+    applyHighlight();
+  }
+});
+
 onMounted(async () => {
   document.title = '课程回顾'
 
@@ -137,6 +174,8 @@ onMounted(async () => {
   } catch (error) {
     console.error('Failed to load course data:', error)
   }
+
+  applyHighlight();
 })
 </script>
 
@@ -661,9 +700,24 @@ p {
   padding: 0.5rem;
   border-radius: 4px;
   overflow-x: auto;
+  margin: 0.5rem 0;
+  position: relative;
 }
 
-.markdown-content :deep(code) {
+/* Markdown code highlight */
+.markdown-content :deep(code.hljs) {
+  padding: 0;
+  background-color: transparent;
+}
+
+.markdown-content :deep(pre code.hljs) {
+  display: block;
+  font-family: 'Fira Code', Consolas, Monaco, 'Andale Mono', monospace;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.markdown-content :deep(:not(pre) > code) {
   font-family: monospace;
   background-color: var(--td-bg-color-page);
   padding: 0.1rem 0.3rem;
