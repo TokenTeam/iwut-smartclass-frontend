@@ -3,6 +3,8 @@ import { ref } from 'vue'
 
 interface CourseSummary {
   data: string
+  model: string
+  token: string
   status: string
 }
 
@@ -31,20 +33,26 @@ interface CourseData {
   courseTime: string
   courseVideo: string
   summary: string
+  summaryModel: string
+  summaryToken: string
   summaryStatus: string
 }
 
-export const getCourse = async (courseName: string, date:string, token: string): Promise<CourseData | undefined> => {
+export const getCourse = async (
+  courseName: string,
+  date: string,
+  token: string,
+): Promise<CourseData | undefined> => {
   const errorMessage = ref('')
 
   const postData = {
-    "course_name": courseName,
-    "date": date,
-    "token": token
+    course_name: courseName,
+    date: date,
+    token: token,
   }
 
   try {
-    const response = await post('/getCourse', postData, errorMessage) as unknown
+    const response = (await post('/getCourse', postData, errorMessage)) as unknown
     if (response && typeof response === 'object' && 'code' in response && 'data' in response) {
       const courseResponse = response as CourseResponse
       if (courseResponse.code === 200 && courseResponse.data) {
@@ -57,7 +65,9 @@ export const getCourse = async (courseName: string, date:string, token: string):
           courseTime: courseResponse.data.time,
           courseVideo: courseResponse.data.video,
           summary: courseResponse.data.summary.data,
-          summaryStatus: courseResponse.data.summary.status
+          summaryModel: courseResponse.data.summary.model,
+          summaryToken: courseResponse.data.summary.token,
+          summaryStatus: courseResponse.data.summary.status,
         }
       }
     }

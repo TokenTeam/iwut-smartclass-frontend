@@ -29,17 +29,19 @@ const courseDate = ref('')
 const courseTime = ref('')
 const courseVideo = ref('')
 const summary = ref('')
+const summaryModel = ref('')
+const summaryToken = ref('')
 const summaryStatus = ref('')
 
 const switchTab = (tab: string) => {
-  activeTab.value = tab;
+  activeTab.value = tab
   if (tab === 'summary' && summary.value) {
     // 延迟执行确保 DOM 更新
     setTimeout(() => {
-      applyHighlight();
-    }, 100);
+      applyHighlight()
+    }, 100)
   }
-};
+}
 
 const handleVideoLoad = () => {
   isVideoLoaded.value = true
@@ -103,30 +105,30 @@ const renderedSummary = computed(() => {
 const applyHighlight = () => {
   nextTick(() => {
     document.querySelectorAll('pre code').forEach((block) => {
-      hljs.highlightElement(block as HTMLElement);
-    });
-  });
-};
+      hljs.highlightElement(block as HTMLElement)
+    })
+  })
+}
 
 marked.setOptions({
-  highlight: function(code: string, language: string) {
+  highlight: function (code: string, language: string) {
     if (language && hljs.getLanguage(language)) {
       try {
-        return hljs.highlight(code, {language}).value;
+        return hljs.highlight(code, { language }).value
       } catch {
-        return code;
+        return code
       }
     }
-    return hljs.highlightAuto(code).value;
+    return hljs.highlightAuto(code).value
   },
-  langPrefix: 'hljs language-'
-} as never);
+  langPrefix: 'hljs language-',
+} as never)
 
 watch(renderedSummary, () => {
   if (renderedSummary.value) {
-    applyHighlight();
+    applyHighlight()
   }
-});
+})
 
 onMounted(async () => {
   document.title = '课程回顾'
@@ -166,6 +168,8 @@ onMounted(async () => {
       courseTime.value = courseData.courseTime
       courseVideo.value = courseData.courseVideo
       summary.value = courseData.summary
+      summaryModel.value = courseData.summaryModel
+      summaryToken.value = courseData.summaryToken
       summaryStatus.value = courseData.summaryStatus
     }
 
@@ -175,7 +179,7 @@ onMounted(async () => {
     console.error('Failed to load course data:', error)
   }
 
-  applyHighlight();
+  applyHighlight()
 })
 </script>
 
@@ -290,7 +294,7 @@ onMounted(async () => {
             <t-button
               size="small"
               variant="outline"
-              @click="copyToClipboard(summary, (status) => copyStatus = status)"
+              @click="copyToClipboard(summary, (status) => (copyStatus = status))"
               class="function-btn"
             >
               <template #icon>
@@ -310,7 +314,52 @@ onMounted(async () => {
           <t-loading size="small" style="margin-right: 8px" />
           <span>生成中...请稍后查看...</span>
         </p>
-        <div v-else-if="summary" class="markdown-content" v-html="renderedSummary"></div>
+        <div v-else-if="summary">
+          <div class="markdown-content" v-html="renderedSummary"></div>
+          <div v-if="summaryModel && summaryToken" class="summary-meta">
+            <div class="meta-item">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="transparent"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"
+                ></path>
+                <path
+                  d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"
+                ></path>
+                <path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"></path>
+                <path d="M17.599 6.5a3 3 0 0 0 .399-1.375"></path>
+                <path d="M6.003 5.125A3 3 0 0 0 6.401 6.5"></path>
+                <path d="M3.477 10.896a4 4 0 0 1 .585-.396"></path>
+                <path d="M19.938 10.5a4 4 0 0 1 .585.396"></path>
+                <path d="M6 18a4 4 0 0 1-1.967-.516"></path>
+                <path d="M19.967 17.484A4 4 0 0 1 18 18"></path>
+              </svg>
+              <span>{{ summaryModel }}</span>
+            </div>
+            <div class="meta-item">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="transparent"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="8" cy="8" r="6"></circle>
+                <path d="M18.09 10.37A6 6 0 1 1 10.34 18"></path>
+                <path d="M7 6h1v4"></path>
+                <path d="m16.71 13.88.7.71-2.82 2.82"></path>
+              </svg>
+              <span>{{ summaryToken }}</span>
+            </div>
+          </div>
+        </div>
         <p v-else>暂无内容</p>
       </div>
     </div>
@@ -343,6 +392,7 @@ onMounted(async () => {
   color: var(--td-text-color-primary, var(--td-font-white-1));
   background-color: var(--td-bg-color-page);
   position: relative;
+  user-select: none;
 }
 
 .video-container {
@@ -651,6 +701,38 @@ onMounted(async () => {
   color: var(--td-warning-color);
 }
 
+.summary-meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 12px;
+  color: var(--td-text-color-secondary);
+  font-size: 10px;
+  opacity: 0.85;
+  justify-content: flex-end;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  color: #999;
+}
+
+.meta-item svg {
+  width: 12px;
+  height: 12px;
+  vertical-align: middle;
+  margin-right: 4px;
+  stroke: #999;
+  fill: none;
+}
+
+.meta-item span {
+  vertical-align: middle;
+  margin-right: 8px;
+  line-height: 1;
+}
+
 h2 {
   color: var(--td-brand-color);
   margin-top: 0;
@@ -666,6 +748,7 @@ p {
 .markdown-content {
   color: var(--td-text-color-secondary, var(--td-font-white-2));
   margin-top: 0.5rem;
+  user-select: text;
 }
 
 .markdown-content :deep(h1),
