@@ -28,5 +28,11 @@ export default defineConfig(({ mode }) => {
         }
       } : undefined
     },
+    test: {
+      globals: true,
+      environment: 'jsdom',
+      include: ['src/**/__tests__/*', 'src/test/**/*'],
+      exclude: ['node_modules', 'dist', '.idea', '.git', '.cache']
+    }
   }
 })

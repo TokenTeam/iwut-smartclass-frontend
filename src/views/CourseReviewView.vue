@@ -181,6 +181,18 @@ onMounted(async () => {
 
   applyHighlight()
 })
+
+defineExpose({
+  courseName,
+  courseTeacher,
+  courseLocation,
+  summaryStatus,
+  activeTab,
+  isVideoLoaded,
+  generateCourseSummary,
+  switchTab,
+  handleVideoLoad,
+})
 </script>
 
 <template>
@@ -294,7 +306,7 @@ onMounted(async () => {
             <t-button
               size="small"
               variant="outline"
-              @click="copyToClipboard(summary, (status) => (copyStatus = status))"
+              @click="copyToClipboard(summary, (status: boolean) => (copyStatus.value = status))"
               class="function-btn"
             >
               <template #icon>
