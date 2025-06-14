@@ -8,60 +8,17 @@ import hljs from 'highlight.js'
 import 'katex/dist/katex.min.css'
 import 'highlight.js/styles/atom-one-dark.css'
 
-import { getCourse } from '@/api/getCourse'
-import { generateSummary } from '@/api/generateSummary.ts'
-import { getToken, getLocalToken } from '@/api/rpc.ts'
 import { copyToClipboard } from '@/utils/clipboard.ts'
+import { useCourseStore } from '@/stores/course'
+import { useCourseUIStore } from '@/stores/course-ui.ts'
 
-const activeTab = ref('info')
-const isLoading = ref(true)
-const isVideoLoaded = ref(false)
-const isFunctionAreaExpanded = ref(false)
-const copyStatus = ref(false)
+const courseStore = useCourseStore()
+const uiStore = useCourseUIStore()
 
 const date = ref('')
-const token = ref('')
-const subID = ref()
-const courseName = ref('')
-const courseTeacher = ref('')
-const courseLocation = ref('')
-const courseDate = ref('')
-const courseTime = ref('')
-const courseVideo = ref('')
-const summary = ref('')
-const summaryModel = ref('')
-const summaryToken = ref('')
-const summaryStatus = ref('')
-
-const switchTab = (tab: string) => {
-  activeTab.value = tab
-  if (tab === 'summary' && summary.value) {
-    // 延迟执行确保 DOM 更新
-    setTimeout(() => {
-      applyHighlight()
-    }, 100)
-  }
-}
 
 const handleVideoLoad = () => {
-  isVideoLoaded.value = true
-}
-
-const generateCourseSummary = async (task: string) => {
-  try {
-    const result = await generateSummary(subID.value, token.value, task)
-    summaryStatus.value = 'generating'
-    console.log('Generating summary, SubID:', subID.value)
-    if (result) {
-      summaryStatus.value = result.summaryStatus
-    }
-  } catch (error) {
-    console.error('Failed to generate summary:', error)
-  }
-}
-
-const toggleFunctionArea = () => {
-  isFunctionAreaExpanded.value = !isFunctionAreaExpanded.value
+  courseStore.isVideoLoaded = true
 }
 
 const renderLatex = (text: string) => {
@@ -89,10 +46,10 @@ const renderLatex = (text: string) => {
 }
 
 const renderedSummary = computed(() => {
-  if (!summary.value) return ''
+  if (!courseStore.summary) return ''
 
   // 先处理 Markdown 内容中的 LaTeX 公式
-  const processedText = renderLatex(summary.value)
+  const processedText = renderLatex(courseStore.summary)
 
   // 再将 Markdown 转换为 HTML
   const rawHtml = marked(processedText).toString()
@@ -139,42 +96,10 @@ onMounted(async () => {
     const courseNameParam = queryParams.get('course')
 
     if (dateParam) date.value = dateParam
-    if (courseNameParam) courseName.value = decodeURIComponent(courseNameParam)
+    if (courseNameParam) courseStore.courseName = decodeURIComponent(courseNameParam)
 
-    token.value = await getLocalToken()
-    let courseData
-
-    try {
-      courseData = await getCourse(courseName.value, date.value, token.value)
-      if (!courseData) {
-        token.value = await getToken()
-        courseData = await getCourse(courseName.value, date.value, token.value)
-      }
-    } catch {
-      token.value = await getToken()
-      try {
-        courseData = await getCourse(courseName.value, date.value, token.value)
-      } catch (innerError) {
-        console.error('Failed to get course data even with new token:', innerError)
-      }
-    }
-
-    console.log(courseData)
-    if (courseData) {
-      subID.value = courseData.subID
-      courseTeacher.value = courseData.courseTeacher
-      courseLocation.value = courseData.courseLocation
-      courseDate.value = courseData.courseDate
-      courseTime.value = courseData.courseTime
-      courseVideo.value = courseData.courseVideo
-      summary.value = courseData.summary
-      summaryModel.value = courseData.summaryModel
-      summaryToken.value = courseData.summaryToken
-      summaryStatus.value = courseData.summaryStatus
-    }
-
-    isLoading.value = false
-    document.title = `${courseName.value} - 课程回顾`
+    await courseStore.fetchCourseData(courseStore.courseName, date.value)
+    document.title = `${courseStore.courseName} - 课程回顾`
   } catch (error) {
     console.error('Failed to load course data:', error)
   }
@@ -183,14 +108,14 @@ onMounted(async () => {
 })
 
 defineExpose({
-  courseName,
-  courseTeacher,
-  courseLocation,
-  summaryStatus,
-  activeTab,
-  isVideoLoaded,
-  generateCourseSummary,
-  switchTab,
+  courseName: courseStore.courseName,
+  courseTeacher: courseStore.courseTeacher,
+  courseLocation: courseStore.courseLocation,
+  summaryStatus: courseStore.summaryStatus,
+  activeTab: uiStore.activeTab,
+  isVideoLoaded: courseStore.isVideoLoaded,
+  generateCourseSummary: courseStore.generateCourseSummary,
+  switchTab: uiStore.switchTab,
   handleVideoLoad,
 })
 </script>
@@ -201,16 +126,16 @@ defineExpose({
       <div class="video-wrapper">
         <div class="video-placeholder">
           <t-loading
-            v-if="!isVideoLoaded && courseVideo"
+            v-if="!courseStore.isVideoLoaded && courseStore.courseVideo"
             class="video-loading"
             loading
             theme="circular"
             size="52px"
           />
-          <div v-if="!courseVideo" class="no-video-message">暂无视频</div>
+          <div v-if="!courseStore.courseVideo" class="no-video-message">暂无视频</div>
           <iframe
             v-else
-            :src="courseVideo"
+            :src="courseStore.courseVideo"
             allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
             allowfullscreen
             @load="handleVideoLoad"
@@ -219,13 +144,13 @@ defineExpose({
       </div>
 
       <div class="tab-bar">
-        <div class="tab-item" :class="{ active: activeTab === 'info' }" @click="switchTab('info')">
+        <div class="tab-item" :class="{ active: uiStore.activeTab === 'info' }" @click="uiStore.switchTab('info')">
           <span>课程信息</span>
         </div>
         <div
           class="tab-item"
-          :class="{ active: activeTab === 'summary' }"
-          @click="switchTab('summary')"
+          :class="{ active: uiStore.activeTab === 'summary' }"
+          @click="uiStore.switchTab('summary')"
         >
           <img src="/ai.svg" alt="AI" class="tab-icon" />
           <span>AI智能总结</span>
@@ -235,52 +160,52 @@ defineExpose({
 
     <div
       class="content-area"
-      :class="{ 'with-button': activeTab === 'summary' && summaryStatus === '' && courseVideo }"
+      :class="{ 'with-button': uiStore.activeTab === 'summary' && courseStore.summaryStatus === '' && courseStore.courseVideo }"
     >
-      <div v-if="isLoading" class="loading-overlay">
+      <div v-if="courseStore.isLoading" class="loading-overlay">
         <div class="loading-content">
           <t-loading loading theme="circular" size="52px" />
           <span class="loading-text">加载中</span>
         </div>
       </div>
 
-      <div v-if="activeTab === 'info'" class="tab-content info-content active">
-        <h2>{{ courseName }}</h2>
+      <div v-if="uiStore.activeTab === 'info'" class="tab-content info-content active">
+        <h2>{{ courseStore.courseName }}</h2>
         <p class="info-item">
           <el-icon>
             <User />
           </el-icon>
-          {{ courseTeacher }}
+          {{ courseStore.courseTeacher }}
         </p>
         <p class="info-item">
           <el-icon>
             <MapLocation />
           </el-icon>
-          {{ courseLocation }}
+          {{ courseStore.courseLocation }}
         </p>
         <p class="info-item">
           <el-icon>
             <Calendar />
           </el-icon>
-          {{ courseDate }}
+          {{ courseStore.courseDate }}
         </p>
         <p class="info-item">
           <el-icon>
             <Clock />
           </el-icon>
-          {{ courseTime }}
+          {{ courseStore.courseTime }}
         </p>
       </div>
 
-      <div v-else-if="activeTab === 'summary'" class="tab-content summary-content active">
+      <div v-else-if="uiStore.activeTab === 'summary'" class="tab-content summary-content active">
         <div class="summary-header">
           <h2>AI智能总结</h2>
           <t-button
             variant="text"
             size="small"
-            @click="toggleFunctionArea"
+            @click="uiStore.toggleFunctionArea"
             class="function-toggle"
-            :class="{ expanded: isFunctionAreaExpanded }"
+            :class="{ expanded: uiStore.isFunctionAreaExpanded }"
           >
             <template #icon>
               <t-icon name="setting" />
@@ -289,12 +214,12 @@ defineExpose({
           </t-button>
         </div>
 
-        <div v-if="summary && isFunctionAreaExpanded" class="function-area">
+        <div v-if="courseStore.summary && uiStore.isFunctionAreaExpanded" class="function-area">
           <div class="function-container">
             <t-button
               size="small"
               variant="outline"
-              @click="generateCourseSummary('regenerate')"
+              @click="courseStore.generateCourseSummary('regenerate')"
               class="function-btn"
             >
               <template #icon>
@@ -306,29 +231,29 @@ defineExpose({
             <t-button
               size="small"
               variant="outline"
-              @click="copyToClipboard(summary, (status: boolean) => (copyStatus.value = status))"
+              @click="copyToClipboard(courseStore.summary, uiStore.setCopyStatus)"
               class="function-btn"
             >
               <template #icon>
-                <t-icon :name="copyStatus ? 'check-circle-filled' : 'file-copy'" />
+                <t-icon :name="uiStore.copyStatus ? 'check-circle-filled' : 'file-copy'" />
               </template>
-              {{ copyStatus ? '已复制' : '复制Markdown' }}
+              {{ uiStore.copyStatus ? '已复制' : '复制Markdown' }}
             </t-button>
           </div>
         </div>
 
-        <div v-if="summary" class="ai-warning-banner">
+        <div v-if="courseStore.summary" class="ai-warning-banner">
           <t-icon name="info-circle" class="warning-icon"></t-icon>
           <span>内容由AI生成，请注意分辨</span>
         </div>
 
-        <p v-if="summaryStatus === 'generating'" class="generating-status">
+        <p v-if="courseStore.summaryStatus === 'generating'" class="generating-status">
           <t-loading size="small" style="margin-right: 8px" />
           <span>生成中...请稍后查看...</span>
         </p>
-        <div v-else-if="summary">
+        <div v-else-if="courseStore.summary">
           <div class="markdown-content" v-html="renderedSummary"></div>
-          <div v-if="summaryModel && summaryToken" class="summary-meta">
+          <div v-if="courseStore.summaryModel && courseStore.summaryToken" class="summary-meta">
             <div class="meta-item">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -352,7 +277,7 @@ defineExpose({
                 <path d="M6 18a4 4 0 0 1-1.967-.516"></path>
                 <path d="M19.967 17.484A4 4 0 0 1 18 18"></path>
               </svg>
-              <span>{{ summaryModel }}</span>
+              <span>{{ courseStore.summaryModel }}</span>
             </div>
             <div class="meta-item">
               <svg
@@ -368,7 +293,7 @@ defineExpose({
                 <path d="M7 6h1v4"></path>
                 <path d="m16.71 13.88.7.71-2.82 2.82"></path>
               </svg>
-              <span>{{ summaryToken }}</span>
+              <span>{{ courseStore.summaryToken }}</span>
             </div>
           </div>
         </div>
@@ -378,13 +303,13 @@ defineExpose({
 
     <div
       class="bottom-button-container"
-      v-if="activeTab === 'summary' && summaryStatus === '' && courseVideo"
+      v-if="uiStore.activeTab === 'summary' && courseStore.summaryStatus === '' && courseStore.courseVideo"
     >
       <t-button
         theme="primary"
         size="medium"
         block
-        @click="generateCourseSummary('new')"
+        @click="courseStore.generateCourseSummary('new')"
         class="generate-summary-btn"
       >
         生成AI摘要

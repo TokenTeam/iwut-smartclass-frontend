@@ -5,6 +5,7 @@
     "src/test/**/*",
     "src/api/**/*",
     "src/views/**/*",
+    "src/stores/**/*",
     "env.d.ts",
     "src/utils/**/*"
   ],

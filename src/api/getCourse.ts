@@ -24,7 +24,7 @@ interface CourseResponse {
   }
 }
 
-interface CourseData {
+export interface CourseData {
   subID: number
   courseName: string
   courseTeacher: string
