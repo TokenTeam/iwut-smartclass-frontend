@@ -214,7 +214,7 @@ defineExpose({
           </t-button>
         </div>
 
-        <div v-if="courseStore.summary && uiStore.isFunctionAreaExpanded" class="function-area">
+        <div v-if="courseStore.summary && uiStore.isFunctionAreaExpanded && courseStore.summaryStatus === 'finished'" class="function-area">
           <div class="function-container">
             <t-button
               size="small"
@@ -242,7 +242,7 @@ defineExpose({
           </div>
         </div>
 
-        <div v-if="courseStore.summary" class="ai-warning-banner">
+        <div v-if="courseStore.summary && courseStore.summaryStatus === 'finished'" class="ai-warning-banner">
           <t-icon name="info-circle" class="warning-icon"></t-icon>
           <span>内容由AI生成，请注意分辨</span>
         </div>
@@ -319,18 +319,6 @@ defineExpose({
 </template>
 
 <style scoped>
-.mobile-container {
-  width: 100%;
-  max-width: 600px;
-  margin: 0 auto;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  color: var(--td-text-color-primary, var(--td-font-white-1));
-  background-color: var(--td-bg-color-page);
-  position: relative;
-  user-select: none;
-}
 
 .video-container {
   width: 100%;

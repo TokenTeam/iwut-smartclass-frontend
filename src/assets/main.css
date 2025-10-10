@@ -1,1 +1,14 @@
 @import './theme.css';
+
+.mobile-container {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  color: var(--td-text-color-primary, var(--td-font-white-1));
+  background-color: var(--td-bg-color-page);
+  position: relative;
+  user-select: none;
+}
