@@ -18,6 +18,7 @@ jobs:
         uses: actions/setup-node@v5.0.0
       - name: Build target
         run: |
+          export VITE_API_BASE_URL=${{ vars.API_BASE_URL }} && \
           npm install -g pnpm && \
           pnpm i && \
           pnpm run build
