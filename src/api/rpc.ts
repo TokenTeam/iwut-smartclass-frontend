@@ -44,7 +44,7 @@ export async function getToken(): Promise<string> {
     }) as SpiderResponse;
 
     const tokenMatch = decodeURIComponent(spiderResponse.cookies).match(/(eyJ[a-zA-Z0-9_-]+.[a-zA-Z0-9_-]+.[a-zA-Z0-9_-]+)/);
-    const token = tokenMatch ? tokenMatch[1] : '';
+    const token: string = tokenMatch && tokenMatch[1] ? tokenMatch[1] : '';
     await saveLocalToken(token);
     return token;
   } catch (error) {
