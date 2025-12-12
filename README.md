@@ -16,7 +16,7 @@ http://localhost:5173/course-review?date=2025-03-28&course=%E6%95%B0%E5%AD%A6
 Parameters:
 
 - `date`: Date of the course review.
-- `courseName`: URL Encoded name of the course.
+- `course`: URL Encoded name of the course.
 
 ## Project Setup
 

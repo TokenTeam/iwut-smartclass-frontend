@@ -1,0 +1,42 @@
+main:
+  push:
+    - docker:
+        image: node:24
+        volumes:
+          - /usr/local/share/.cache/yarn:cow
+      stages:
+        - name: Install dependencies
+          script: yarn install
+        - name: Build
+          imports:
+            - https://cnb.cool/TokenTeam/secrets/-/blob/main/iwut-smartclass.yml
+          script: |
+            export VITE_API_BASE_URL=$frontend_API_BASE_URL
+            yarn build
+        - name: Pack files
+          script: tar -C dist -cf - . | gzip -9 > dist.tar.gz
+        - name: Upload to attachments
+          image: cnbcool/attachments:latest
+          settings:
+            attachments:
+              - dist.tar.gz
+        - name: Deploy
+          image: tencentcom/tcloud-cmd
+          imports:
+            - https://cnb.cool/TokenTeam/secrets/-/blob/main/tcloud.yml
+            - https://cnb.cool/TokenTeam/secrets/-/blob/main/iwut-smartclass.yml
+          settings:
+            secret_id: ${secret_id}
+            secret_key: ${secret_key}
+            region: ap-chengdu
+            instance_ids: ${server_prod}
+            script: |
+              curl -L --fail \
+                -H "Authorization: Bearer ${CNB_TOKEN}" \
+                -H "Accept: application/vnd.cnb.api+json" \
+                -o ~/dist.tar.gz \
+                "${CNB_API_ENDPOINT}/${CNB_REPO_SLUG}/-/commit-assets/download/${CNB_COMMIT}/dist.tar.gz"
+              mkdir -p ~/dist
+              tar -C ~/dist -xzf ~/dist.tar.gz
+              rsync -avz --delete ~/dist/ /www/wwwroot/${CNB_REPO_NAME}/
+              rm -rf ~/dist ~/dist.tar.gz
