@@ -1,5 +1,5 @@
 {
-  "name": "iwut-smart-timetable-frontend",
+  "name": "iwut-smartclass-frontend",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -59,6 +59,9 @@
     "vue-tsc": "^3.2.1"
   },
   "pnpm": {
+    "overrides": {
+      "vite": "npm:rolldown-vite@latest"
+    },
     "onlyBuiltDependencies": [
       "esbuild",
       "vue-demi"
