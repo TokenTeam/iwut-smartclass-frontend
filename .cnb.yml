@@ -40,3 +40,7 @@ main:
               tar -C ~/dist -xzf ~/dist.tar.gz
               rsync -avz --delete ~/dist/ /www/wwwroot/${CNB_REPO_NAME}/
               rm -rf ~/dist ~/dist.tar.gz
+        - name: Delete attachments
+          image: cnbcool/attachments:latest
+          settings:
+            type: DELETE
