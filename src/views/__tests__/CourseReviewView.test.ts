@@ -6,21 +6,10 @@ import { getCourse } from '@/api/getCourse.ts'
 import { generateSummary } from '@/api/generateSummary.ts'
 import { getToken, getLocalToken } from '@/api/rpc.ts'
 import { mockLocation, flushPromises } from '@/test/setup.ts'
-import type { ComponentPublicInstance } from 'vue'
 import { useCourseStore } from '@/stores/course.ts'
 import { useCourseUIStore } from '@/stores/course-ui.ts'
 
-interface CourseReviewInstance extends ComponentPublicInstance {
-  generateCourseSummary: (task: string) => Promise<void>
-  switchTab: (tab: string) => void
-  handleVideoLoad: () => void
-  courseName: string
-  courseTeacher: string
-  courseLocation: string
-  summaryStatus: string
-  activeTab: string
-  isVideoLoaded: boolean
-}
+
 
 vi.mock('@/api/getCourse')
 vi.mock('@/api/generateSummary')
@@ -53,7 +42,7 @@ describe('CourseReviewView', () => {
     vi.mocked(getLocalToken).mockResolvedValue('local-token')
     vi.mocked(getCourse).mockResolvedValue(mockCourseData)
 
-    const wrapper = mount(CourseReviewView, {
+    mount(CourseReviewView, {
       global: {
         plugins: [createPinia()]
       }
@@ -62,7 +51,6 @@ describe('CourseReviewView', () => {
     await flushPromises()
 
     const courseStore = useCourseStore()
-    const uiStore = useCourseUIStore()
 
     expect(getLocalToken).toHaveBeenCalled()
     expect(getCourse).toHaveBeenCalledWith('测试课程', '2024-03-20', 'local-token')
@@ -76,7 +64,7 @@ describe('CourseReviewView', () => {
     vi.mocked(getCourse).mockResolvedValueOnce(undefined).mockResolvedValueOnce(mockCourseData)
     vi.mocked(getToken).mockResolvedValue('new-token')
 
-    const wrapper = mount(CourseReviewView, {
+    mount(CourseReviewView, {
       global: {
         plugins: [createPinia()]
       }
@@ -100,7 +88,7 @@ describe('CourseReviewView', () => {
       summaryStatus: 'processing',
     })
 
-    const wrapper = mount(CourseReviewView, {
+    mount(CourseReviewView, {
       global: {
         plugins: [createPinia()]
       }
@@ -119,7 +107,7 @@ describe('CourseReviewView', () => {
     vi.mocked(getLocalToken).mockResolvedValue('local-token')
     vi.mocked(getCourse).mockResolvedValue(mockCourseData)
 
-    const wrapper = mount(CourseReviewView, {
+    mount(CourseReviewView, {
       global: {
         plugins: [createPinia()]
       }
@@ -137,7 +125,7 @@ describe('CourseReviewView', () => {
     vi.mocked(getLocalToken).mockResolvedValue('local-token')
     vi.mocked(getCourse).mockResolvedValue(mockCourseData)
 
-    const wrapper = mount(CourseReviewView, {
+    mount(CourseReviewView, {
       global: {
         plugins: [createPinia()]
       }
